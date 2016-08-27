@@ -20,11 +20,13 @@ Key features
 
 ## Usage
 
+```
 Usage: efistub command [ARGS]
+```
 
 ### BOOT MANAGEMENT
 
-...
+```
   bootctl install [<config-file>]
       Install all boot configurations
 
@@ -33,11 +35,11 @@ Usage: efistub command [ARGS]
 
   bootctl rm-entry <title>
       Remove UEFI boot menu entry with the name <title>
-...
+```
 
 ### KEY MANAGEMENT
 
-...
+```
   keys create [more]
       Create personal UEFI secure boot keys (PK,KEK,DB)
 
@@ -52,7 +54,7 @@ Usage: efistub command [ARGS]
   keys switch [usermode|setupmode]
       Usermode: activate usermode by installing the personal PK key
       Setupmode: activate setupmode by removing the personal PK key
-...
+```
 
 ### UEFI COMMANDS
 
