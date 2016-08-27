@@ -58,17 +58,17 @@ Usage: efistub command [ARGS]
 
 ### UEFI COMMANDS
 
-...
+```
   uefi status
       show current secure boot status
 
   uefi boot2setup
       start UEFI setup after next boot
-...
+```
 
 ## Tool installation
 
-more to come...
+more to come```
 
 ## Setting up EFISTUB configurations
 
@@ -79,7 +79,7 @@ EFI system partition is mounted in /boot/efi if not mentioned otherwise.
 
 For a standard boot configuration all you need to add is the following:
 
-...
+```
 #/etc/efistub/config.d/10_arch.conf
 #
 # Don't forget to insert your specific UUIDs!
@@ -89,22 +89,22 @@ ESPDIR="/boot/efi/EFI/arch"
 KERNEL="/boot/vmlinuz-linux"
 INITRD="/boot/intel-ucode.img /boot/initramfs-linux.img"
 OPTIONS="resume=UUID=<your-swap-uuid> root=UUID=<your-rootfs-uuid> ro quiet splash"
-...
+```
 
 Now you can install this configuration by executing
 
-...
+```
 efistub bootcfg-install
-...
+```
 
 You can verify the successful installation with the following commands
 
-...
+```
 # show boot menu entry
 efibootmgr -v
 # the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img should reside on the ESP
 ls -l /boot/efi/EFI/arch
-...
+```
 
 ### Secure Boot setup
 
@@ -116,13 +116,13 @@ bla bla bla
 
 ## Used directories and configuration files
 
-...
+```
 /etc/efistub/keys/				location of personal secure boot keys
 /etc/efistub/config.d/				location of boot config files
 # only used for automatic image updates
 /etc/system.d/system/efistub-update.path	trigger automatic boot file generation
 /etc/system.d/system/efistub-update.service	run 'efistub update-bootimages' for new kernels
-...
+```
 
 ## Package dependencies on Arch
 
