@@ -1,0 +1,527 @@
+!/usr/bin/bash
+
+# ------------------------------------------------------------
+# Manage Linux EFISTUB (secure) boot configurations
+# (C) 2016 Erich Boehm, License: GPLv3
+# ------------------------------------------------------------
+
+KEYDIR="/etc/efistub/keys"
+CFGDIR="/etc/efistub/config.d"
+
+# special files
+OSREL="/etc/os-release"
+EFISTUB="/usr/lib/systemd/boot/efi/linuxx64.efi.stub"
+
+# efivar filesystem
+EFIVARSDIR="/sys/firmware/efi/efivars"
+
+# ------------------------------------------------------------
+# functions
+# ------------------------------------------------------------
+
+fn_add_bootentry() {
+  local BOOTLABEL="$1"
+  local BOOTIMAGE="$(basename "$2")"
+  local EFIPATH="$(dirname "$2")"
+  local BOOTOPT="$3"
+
+  if [[ -z $BOOTLABEL ]]; then
+    echo "Error: boot label empty"
+    exit 1
+  fi
+  if [[ ! -f "$EFIPATH/$BOOTIMAGE" ]]; then
+    echo "Error: $EFIPATH/$BOOTIMAGE does not exist."
+    exit 1
+  fi
+
+  # determine efibootmgr disk parameters
+  local EFIDIR="$(echo "$EFIPATH" | sed "s#^$(df --output=target "$EFIPATH" | tail -n -1)/##")"
+  local EFI_UUID="$(blkid -s UUID -o value $(df --output=source "$EFIPATH" | tail -n -1))"
+
+  local EFIDEVICE=$(blkid -U $EFI_UUID)
+  local EFIPART=${EFIDEVICE:(-1)}
+  local EFIDISK=${EFIDEVICE%$EFIPART}
+
+  # create EFI boot menu entry
+  if [[ -z $BOOTOPT ]]; then
+    efibootmgr --create --quiet --label "$BOOTLABEL" --disk "$EFIDISK" \
+      --part "$EFIPART" --loader "\\${EFIDIR/\//\\}\\$BOOTIMAGE"
+  else
+    efibootmgr --create --quiet --label "$BOOTLABEL" --disk "$EFIDISK" \
+      --part "$EFIPART" --loader "\\${EFIDIR/\//\\}\\$BOOTIMAGE" \
+      --unicode "$BOOTOPT"
+  fi
+}
+
+fn_create_bootimg_signed() {
+
+  local KERNELIMG="$1"
+  local INITRDIMG="$2"
+  local BOOTOPT="$3"
+  local SIGNEDIMG="$4"
+
+  # create temporary build directory
+  local BUILDDIR="$(/usr/bin/mktemp -d kernel-build-XXXX)"
+  chmod 700 "$BUILDDIR"
+
+  # join initrd images
+  cat $INITRDIMG > "$BUILDDIR/initrd.img"
+
+  # create kernel cmdline file
+  echo "$BOOTOPT" > "$BUILDDIR/cmdline"
+
+  /usr/bin/objcopy \
+    --add-section ".osrel=$OSREL"                --change-section-vma ".osrel=0x20000" \
+    --add-section ".cmdline=$BUILDDIR/cmdline"   --change-section-vma ".cmdline=0x30000" \
+    --add-section ".linux=$KERNELIMG"            --change-section-vma ".linux=0x40000" \
+    --add-section ".initrd=$BUILDDIR/initrd.img" --change-section-vma ".initrd=0x3000000" \
+    "$EFISTUB" "$BUILDDIR/linux-boot.img"
+
+  /usr/bin/sbsign --key "$KEYDIR/DB.key" --cert "$KEYDIR/DB.pem" \
+    --output "$BUILDDIR/linux-boot-signed.img" "$BUILDDIR/linux-boot.img"
+
+  mkdir -p "$(dirname $SIGNEDIMG)"
+  cp "$BUILDDIR/linux-boot-signed.img" "$SIGNEDIMG"
+  rm -rf "$BUILDDIR"
+}
+
+fn_rm_bootentry() {
+  local BOOTLABEL="$1"
+  for b in $(efibootmgr | egrep "^Boot[[:digit:]]{4}\* $BOOTLABEL$" | cut -f1 -d'*'); do
+    local BOOTNUM=${b##Boot}
+    efibootmgr --quiet --bootnum $BOOTNUM --delete-bootnum
+  done
+}
+
+fn_load_cfg() {
+  local CFGFILE="$1"
+  local ONLYUPDATEFILES="$2"
+
+  local ESPSUBDIR
+  local RAMDISKS=""
+  local RD
+
+  # clear global configuration variables first
+  unset TITLE			# boot label
+  unset KERNEL INITRD OPTIONS	# kernel sources
+  unset ESPDIR EFI EFISIGNED	# config variants
+
+  # read configuration
+  source "$CFGFILE"
+
+  if [[ -n $EFISIGNED ]]; then
+    echo "loading signed kernel config $CFGFILE"
+    fn_create_bootimg_signed "$KERNEL" "$INITRD" "$OPTIONS" "$EFISIGNED"
+    if [[ -z $ONLYUPDATEFILES ]]; then
+      echo "creating boot entry $TITLE"
+      fn_rm_bootentry "$TITLE"
+      fn_add_bootentry "$TITLE" "$EFISIGNED"
+    fi
+  elif [[ -n $EFI ]]; then
+    echo "loading generic efi config $CFGFILE"
+    if [[ -z $ONLYUPDATEFILES ]]; then
+      echo "creating boot entry $TITLE"
+      fn_rm_bootentry "$TITLE"
+      fn_add_bootentry "$TITLE" "$EFI" "$OPTIONS"
+    fi
+  elif [[ -n $ESPDIR ]]; then
+    echo "loading standard kernel config $CFGFILE"
+    mkdir -p "$ESPDIR"
+    cp -p "$KERNEL" "$ESPDIR"
+    for RD in $INITRD; do
+      cp -p "$RD" "$ESPDIR"
+    done
+    if [[ -z $ONLYUPDATEFILES ]]; then
+      echo "creating boot entry $TITLE"
+      ESPSUBDIR="${ESPDIR/$(df --output=target "$ESPDIR" | tail -n -1)\//}"
+      ESPSUBDIR="${ESPSUBDIR/\//\\}"
+      for RD in $INITRD; do
+        RAMDISKS+="initrd=\\$ESPSUBDIR\\$(basename $RD) "
+      done
+      fn_rm_bootentry "$TITLE"
+      fn_add_bootentry "$TITLE" "$ESPDIR/$(basename $KERNEL)" "$RAMDISKS$OPTIONS"
+    fi
+  fi
+}
+
+fn_load_cfg_dir() {
+  local ONLYUPDATEFILES="$1"
+
+  local CFGFILES=(/etc/efistub/config.d/*.conf)
+  local i
+  # process in reverse order to set correct boot order with efibootmgr
+  for ((i=${#CFGFILES[@]}-1; i>=0; i--)); do
+    fn_load_cfg "${CFGFILES[$i]}" "$ONLYUPDATEFILES"
+  done
+}
+
+#----------------------------------------------------------------------------
+
+fn_create_keys() {
+  #
+  # The Platform Key (PK).
+  #
+  # The PK variable contains an UEFI 'signature database' which has at most one entry in it.
+  # When PK is empty (which the user can perform via a BIOS GUI action), the system is in setup
+  # mode (and secure boot is turned off). In setup mode, any of the four special variables can be
+  # updated without authentication checks.
+  # Immediately after a valid platform key is written into PK, the system enters user mode.
+  # Once in user mode, updates to any of the four variables must be digitally signed with an
+  # acceptable key. The private key counterpart to the public key stored in PK may be used
+  # to sign user-mode updates to PK or KEK, but not db or dbx.
+  #
+  # The Key Exchange Key (KEK).
+  #
+  # This variable holds a signature database containing one (or more) X.509 / 2048-bit RSA public keys
+  # (other formats are possible). In user mode, any db/dbx (see below) updates must be signed by the
+  # private key counterpart of one of these keys (the PK cannot be used for this).
+  #
+  # The signature database (DB).
+  #
+  # As the name suggests, this variable holds a UEFI signature database which may contain public keys,
+  # signatures and plain hashes. In practice, X.509 / RSA-2048 public keys are most common. It
+  # functions essentially as a boot executable whitelist.
+  #
+  # The Forbidden Signatures Database (DBX).
+  #
+  # This variable holds a signature database of similar format to db. It functions essentially as
+  # a boot executable blacklist.
+
+  echo -n "Enter a 'Common Name' to embed in the keys: "
+  read NAME
+
+  #
+  # create efi key directory
+  #
+  mkdir -p "$KEYDIR"
+  chmod 700 "$KEYDIR"
+  cd "$KEYDIR"
+
+  #
+  # generate keys
+  #
+  openssl req -new -x509 -newkey rsa:2048 \
+    -subj "/CN=$NAME platform key/" \
+    -keyout PK.key -out PK.pem \
+    -days 3650 -nodes -sha256
+  openssl req -new -x509 -newkey rsa:2048 \
+    -subj "/CN=$NAME key-exchange key/" \
+    -keyout KEK.key -out KEK.pemi \
+    -days 3650 -nodes -sha256
+  openssl req -new -x509 -newkey rsa:2048 \
+    -subj "/CN=$NAME kernel signing key/" \
+    -keyout DB.key -out DB.pem \
+    -days 3650 -nodes -sha256
+
+  #
+  # generate PK.auth and empty platform key PKempty.auth
+  #
+  local UUID=$(uuidgen)
+  local DATE=$(date --date='1 second' +'%Y-%m-%d %H:%M:%S')
+
+  # PK.auth
+  cert-to-efi-sig-list -g $UUID PK.pem PK.esl
+  sign-efi-sig-list -t "$DATE" -k PK.key -c PK.pem PK PK.esl PK.auth
+  rm -f PK.esl
+
+  # generate PKno.auth
+  rm -f PKno.esl
+  touch PKno.esl
+  sign-efi-sig-list -t "$DATE" -k PK.key -c PK.pem PK PKno.esl PKno.auth
+  rm -f PKno.esl
+
+  #
+  # restrict access to private keys and relax key directory access
+  #
+  chmod 600 *.key
+  chmod 600 *.auth
+  chmod 755 "$KEYDIR"
+
+  # back to original directory
+  cd -
+}
+
+fn_generate_more_keyformats() {
+
+  cd "$KEYDIR" || exit 1
+
+  # convert to .esl - for use with KeyTool
+  cert-to-efi-sig-list -g $UUID KEK.pem KEK.esl
+  cert-to-efi-sig-list -g $UUID DB.pem DB.esl
+
+  # convert to .cer format - for use with built-in key managers
+  openssl x509 -in PK.crt -out PK.cer -outform DER
+  openssl x509 -in KEK.crt -out KEK.cer -outform DER
+  openssl x509 -in DB.crt -out DB.cer -outform DER
+
+  cd -
+}
+
+fn_install_personal_keys() {
+
+  cd "$KEYDIR" || exit 1
+
+  # insert personal keys
+  read -n 1 -r -p "Do you want to upload your personal DB key (Y/n)" REPLY
+  if [[ ${REPLY,,} =~ ^(y|yes| ) ]]; then
+    efi-updatevar -a -c DB.pem db
+  fi
+
+  # insert personal KEK key to enable later key updates in user mode
+  efi-updatevar -a -c KEK.pem KEK
+
+  cd -
+}
+
+fn_switch_to_usermode() {
+
+  cd "$KEYDIR" || exit 1
+  fn_unlock_keyvars
+
+  # insert personal PK key
+  efi-updatevar -f PK.auth PK
+
+  cd -
+}
+
+fn_bootmode() {
+  local EFIVAR=$EFIVARSDIR/SecureBoot-*
+  local SECURE=$(cat $EFIVAR | od -An -t u1 --read-bytes=1 --skip-bytes=4)
+
+  if [[ $SECURE -eq 1 ]]; then
+    echo "SecureBoot: ACTIVE"
+  else
+    echo "SecureBoot: INACTIVE"
+  fi
+}
+
+fn_boot2setup() {
+  # UEFI variables for booting to UEFI firmware setup UI
+  # - Page 312 of UEFI spec 2.3.1C
+  #
+  # The EFI_OS_INDICATIONS_BOOT_TO_FW_UI bit can be set in the
+  # OsIndicationsSupported variable by the firmware, if the
+  # firmware supports OS requests to stop at a firmware user
+  # interface.
+  #
+  # The EFI_OS_INDICATIONS_BOOT_TO_FW_UI bit can be set by the
+  # OS in the OsIndications variable, if the OS desires for
+  # the firmware to stop at a firmware user interface on the
+  # next boot.
+  #
+  # OsIndications variable returns a UINT64 bitmask
+  # OsIndicationsSupported variable returns a UINT64 bitmask
+  # EFI_OS_INDICATIONS_BOOT_TO_FW_UI=0x0000000000000001
+  local OsIndicationsSupported="$(cat $EFIVARSDIR/OsIndicationsSupported-* | od -An -t u8 --read-bytes=8 --skip-bytes=4)"
+
+  # check if boot to firmware setup is supported
+  if [[ $(($OsIndicationsSupported & 1)) -eq 1 ]]; then
+
+    # read OsIndications variable from efivars filesystem
+    local OsIndications_attr="$(cat $EFIVARSDIR/OsIndications-* | od -An -t u4 --read-bytes=4)"
+    local OsIndications_data="$(cat $EFIVARSDIR/OsIndications-* | od -An -t u8 --read-bytes=8 --skip-bytes=4)"
+
+    # set boot to firmware setup bit
+    OsIndications_data=$(($OsIndications_data | 1))
+
+    # --------------------------------------------------------------
+    # UGLY HACK: BASH DOES NOT SUPPORT BINARY DATA OPERATIONS
+    # --------------------------------------------------------------
+    # convert OsIndications attr and data values to little endian
+    # binary string representation in printf format and write
+    # data to efivars filesystem
+    # --------------------------------------------------------------
+    local BINSTR=$(printf "%08x" $OsIndications_attr | sed -r -e 's/(..)(..)(..)(..)/\\x\4\\x\3\\x\2\\x\1/')
+    BINSTR="$BINSTR$(printf "%016x" $OsIndications_data | sed -r -e 's/(..)(..)(..)(..)(..)(..)(..)(..)/\\x\8\\x\7\\x\6\\x\5\\x\4\\x\3\\x\2\\x\1/')"
+    printf "$BINSTR" > $EFIVARSDIR/OsIndications-*
+    echo "UEFI firmware will start setup during next boot."
+  fi
+}
+
+fn_require_root() {
+  if [[ $EUID -ne 0 ]]; then
+     echo "This command must be run as root" 1>&2
+     exit 1
+  fi
+}
+
+fn_usage() {
+  local APPNAME=$(basename "${0%.sh}")
+  local MSG=$(sed -E 's/^[[:space:]]{2}//' <<__EOF__
+  Usage: $APPNAME command [ARGS]
+
+  Manage Linux EFISTUB boot configurations
+
+  Commands:
+
+    ------
+    -- BOOT MANAGEMENT
+    ------
+
+    bootctl install [<config-file>]
+        Install all boot configurations
+
+    bootctl update [<config-file>]
+        Update all configured boot images
+
+    bootctl rm-entry <title>
+        Remove UEFI boot menu entry with the name <title>
+
+    ------
+    -- SECURE BOOT KEY MANAGEMENT
+    ------
+
+    keys list
+        list installed keys in UEFI databases
+
+    keys create [more]
+        Create personal UEFI secure boot keys (PK,KEK,DB)
+
+        The optional argument "more" converts personal keys
+        to '.esl' format for use with KeyTool and '.cer'
+        format for use with built-in UEFI key managers.
+
+    keys install
+        install secure boot keys into UEFI databases (DB,KEK)
+
+    keys activate usermode
+        activate UEFI usermode by installing the personal PK key
+
+    ------
+    -- UEFI COMMANDS
+    ------
+
+    uefi status
+        show current secure boot status
+
+    uefi boot2setup
+        start UEFI setup after next boot
+
+    -h, --help
+        this help text
+__EOF__
+  )
+  echo "$MSG"
+}
+
+# ------------------------------------------------------------
+# main
+# ------------------------------------------------------------
+
+# parse command line arguments
+while [[ $# -gt 0 ]]; do
+  ARG="$1"
+  shift
+  case "$ARG" in
+    -h|--help)
+      fn_usage
+      exit 0
+      ;;
+    bootctl)
+      ARG="$1"
+      shift
+      case "$ARG" in
+        install)
+          if [[ $# -eq 0 ]]; then
+            fn_require_root
+            fn_load_cfg_dir
+          elif [[ $# -eq 1 ]]; then
+            if [[ -f $1 ]]; then
+              fn_require_root
+              fn_load_cfg "$1"
+            else
+              echo "Error: $1 does not exist."
+              exit 1
+            fi
+          else
+            echo "Error: wrong number of arguments for command '$ARG'."
+            exit 1
+          fi
+          ;;
+        update)
+          fn_require_root
+          if [[ $# -eq 0 ]]; then
+            fn_require_root
+            fn_load_cfg_dir yes
+          elif [[ $# -eq 1 ]]; then
+            if [[ -f $1 ]]; then
+              fn_require_root
+              fn_load_cfg "$1" yes
+            else
+              echo "Error: $1 does not exist."
+              exit 1
+            fi
+          else
+            echo "Error: wrong number of arguments for command '$ARG'."
+            exit 1
+          fi
+          ;;
+        rm-bootentry)
+          if [[ $# -ne 1 ]]; then
+            echo "Error: wrong number of arguments for command '$ARG'."
+            exit 1
+          fi
+          fn_require_root
+          fn_rm_bootentry "$1"
+          ;;
+        *)
+          echo "Error: invalid argument '$ARG'. Use --help for more information."
+          exit 1
+      esac
+      exit 0
+      ;;
+    keys)
+      ARG="$1"
+      shift
+      case "$ARG" in
+        create)
+          fn_require_root
+          fn_create_keys
+          [[ $1 == "more" ]] && fn_create_more_keyformats
+          ;;
+        install)
+          fn_require_root
+          fn_install_personal_keys
+          exit 0
+          ;;
+        list)
+          efi-readvar
+          ;;
+        activate)
+          if [[ $1 = "usermode" ]]; then
+            fn_switch_to_usermode
+          fi
+          ;;
+        *)
+          echo "Error: invalid argument '$ARG'. Use --help for more information."
+          exit 1
+          ;;
+      esac
+      exit 0
+      ;;
+    uefi)
+      ARG="$1"
+      shift
+      case "$ARG" in
+        status)
+          fn_bootmode
+          ;;
+        boot2setup)
+          fn_require_root
+          fn_boot2setup
+          ;;
+        *)
+          echo "Error: invalid argument '$ARG'. Use --help for more information."
+          exit 1
+          ;;
+      esac
+      exit 0
+      ;;
+    *)
+      echo "Error: invalid argument '$ARG'. Use --help for more information."
+      exit 1
+      ;;
+  esac
+done
+
+fn_usage
