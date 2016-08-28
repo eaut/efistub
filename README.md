@@ -42,10 +42,9 @@ bootctl rm-entry <title>
 keys create [more]
     Create personal UEFI secure boot keys (PK,KEK,DB)
 
-    The optional argument "more" converts personal keys
-    to '.esl' format for use with KeyTool and
-    '.cer' format for use with many built-in UEFI key
-    managers
+    The optional argument "more" converts personal keys to '.esl' format
+    for use with KeyTool and '.cer' format for use with many built-in
+    UEFI key managers
 
 keys install
     install secure boot keys into UEFI databases (DB,KEK)
@@ -58,16 +57,12 @@ keys switch [usermode|setupmode]
 ### UEFI COMMANDS
 
 ```
-  uefi status
-      show current secure boot status
+uefi status
+    show current secure boot status
 
-  uefi boot2setup
-      start UEFI setup after next boot
+uefi boot2setup
+    start UEFI setup after next boot
 ```
-
-## Tool installation
-
-TODO: add installation procedure
 
 ## Setting up EFISTUB configurations
 
@@ -105,18 +100,15 @@ with
 ```
 ls -l /boot/efi/EFI/arch
 ```
-### Secure Boot setup
-
-TODO: bla bla bla
 
 ### Automatic update of boot images when a new initramfs is generated
 
-You can update all boot images with after a new kernel was installed with
+You manualy update all boot images after a new kernel was installed with
 ```
 efistub bootctl update
 ```
 
-Full automation can be done using two systemd files.
+Full automation can be achieved using two systemd files.
 ```
 # 1st  - /etc/systemd/system/efistub-update.path
 [Unit]
@@ -138,6 +130,12 @@ Description=Start efistub boot image generation
 Type=oneshot
 ExecStart=/usr/bin/efistub bootctl update
 ```
+
+Finally enable it in systemd.
+```
+systemctl enable /etc/systemd/system/efistub-update.path
+```
+
 ## Used directories and configuration files
 
 ```
@@ -145,7 +143,7 @@ ExecStart=/usr/bin/efistub bootctl update
 /etc/efistub/keys/      location of personal secure boot keys
 ```
 
-Automatic image updates via systemd
+Automatic boot image updates
 
 ```
 /etc/system.d/system/efistub-update.path	    trigger automatic boot file generation
@@ -159,3 +157,4 @@ by [Matthew Bentley](https://bentley.link/secureboot).
 
 Other:
 https://wiki.archlinux.org/index.php/Secure_Boot
+https://wiki.archlinux.org/index.php/EFISTUB
