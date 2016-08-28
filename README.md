@@ -5,7 +5,7 @@ A script to manage UEFI boot configurations for Linux EFISTUB kernels. By using 
 
 The management of all aspects of UEFI secure boot configurations is directly supported.
 Generated signed boot images contain the Linux kernel as well as the thereafter used
-intial ramdisks in one file to ensure the verfication of the entire intial boot process.
+initial ramdisks in one file to ensure the verfication of the entire intial boot process.
 
 Are you using a boot loader like grub or systemd-boot simply because you consider
 using plain EFISTUB too cumbersome? Would you like to use secure boot, but hesitated so
@@ -15,7 +15,7 @@ Key features
   - configuration based UEFI boot menu entry creation
   - automated creation of signed secure boot EFI files
   - easy management of personal secure boot keys
-  - simple bash script does it all
+  - short and simple bash script does it all
 
 ## Usage
 
