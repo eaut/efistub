@@ -1,15 +1,13 @@
 # EFISTUB
 ## Description
 
-A collection of scripts to manage UEFI boot configurations for Linux EFISTUB kernels.
-By using "efistub" the management of plain EFISTUB boot configurations is greatly
-simplified. The config file syntax is similar to systemd-boot.
+A script to manage UEFI boot configurations for Linux EFISTUB kernels. By using "efistub" the management of plain EFISTUB boot configurations is greatly simplified. The config file syntax is similar to systemd-boot.
 
 The management of all aspects of UEFI secure boot configurations is directly supported.
 Generated signed boot images contain the Linux kernel as well as the thereafter used
 intial ramdisks in one file to ensure the verfication of the entire intial boot process.
 
-Are you still using a boot loader like grub or systemd-boot simply because you consider
+Are you using a boot loader like grub or systemd-boot simply because you consider
 using plain EFISTUB too cumbersome? Would you like to use secure boot, but hesitated so
 far because the setup is complicated? Then efistub should solve your problem.
 
@@ -20,6 +18,7 @@ Key features
 
 ## Usage
 
+The script efistub has subcommands. They are "bootctl", "keys", "uefi".
 ```
 Usage: efistub command [ARGS]
 ```
@@ -27,33 +26,33 @@ Usage: efistub command [ARGS]
 ### BOOT MANAGEMENT
 
 ```
-  bootctl install [<config-file>]
-      Install all boot configurations
+bootctl install [<config-file>]
+    Install all boot configurations
 
-  bootctl update [<config-file>]
-      Update all boot images
+bootctl update [<config-file>]
+    Update all boot images
 
-  bootctl rm-entry <title>
-      Remove UEFI boot menu entry with the name <title>
+bootctl rm-entry <title>
+    Manually remove UEFI boot menu entry with the name <title>
 ```
 
 ### KEY MANAGEMENT
 
 ```
-  keys create [more]
-      Create personal UEFI secure boot keys (PK,KEK,DB)
+keys create [more]
+    Create personal UEFI secure boot keys (PK,KEK,DB)
 
-      The optional argument "more" converts personal keys
-      to '.esl' format for use with KeyTool and
-      '.cer' format for use with many built-in UEFI key
-      managers
+    The optional argument "more" converts personal keys
+    to '.esl' format for use with KeyTool and
+    '.cer' format for use with many built-in UEFI key
+    managers
 
-  keys install
-      install secure boot keys into UEFI databases (DB,KEK)
+keys install
+    install secure boot keys into UEFI databases (DB,KEK)
 
-  keys switch [usermode|setupmode]
-      Usermode: activate usermode by installing the personal PK key
-      Setupmode: activate setupmode by removing the personal PK key
+keys switch [usermode|setupmode]
+    Usermode: activate usermode by installing the personal PK key
+    Setupmode: activate setupmode by removing the personal PK key
 ```
 
 ### UEFI COMMANDS
@@ -68,7 +67,7 @@ Usage: efistub command [ARGS]
 
 ## Tool installation
 
-more to come```
+TODO: add installation procedure
 
 ## Setting up EFISTUB configurations
 
@@ -94,42 +93,69 @@ OPTIONS="resume=UUID=<your-swap-uuid> root=UUID=<your-rootfs-uuid> ro quiet spla
 Now you can install this configuration by executing
 
 ```
-efistub bootcfg-install
+efistub bootctl install
 ```
 
-You can verify the successful installation with the following commands
-
+To verify the successful installation list all UEFI boot entries with
 ```
-# show boot menu entry
 efibootmgr -v
-# the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img should reside on the ESP
+```
+and check that the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img reside on the ESP
+with
+```
 ls -l /boot/efi/EFI/arch
 ```
-
 ### Secure Boot setup
 
-bla bla bla
+TODO: bla bla bla
 
 ### Automatic update of boot images when a new initramfs is generated
 
-bla bla bla
+You can update all boot images with after a new kernel was installed with
+```
+efistub bootctl update
+```
 
+Full automation can be done using two systemd files.
+```
+# 1st  - /etc/systemd/system/efistub-update.path
+[Unit]
+Description=Trigger efistub boot image generation
+
+[Path]
+PathChanged=/boot/initramfs-linux-fallback.img
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=system-update.target
+```
+```
+# 2nd  - /etc/systemd/system/efistub-update.path
+[Unit]
+Description=Start efistub boot image generation
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/efistub bootctl update
+```
 ## Used directories and configuration files
 
 ```
-/etc/efistub/keys/				location of personal secure boot keys
-/etc/efistub/config.d/				location of boot config files
-# only used for automatic image updates
-/etc/system.d/system/efistub-update.path	trigger automatic boot file generation
-/etc/system.d/system/efistub-update.service	run 'efistub update-bootimages' for new kernels
+/etc/efistub/config.d/  location of boot configuration files
+/etc/efistub/keys/      location of personal secure boot keys
 ```
 
-## Package dependencies on Arch
+Automatic image updates via systemd
 
-The following packages have to be installed in advance
+```
+/etc/system.d/system/efistub-update.path	    trigger automatic boot file generation
+/etc/system.d/system/efistub-update.service   run 'efistub update-bootimages' for new kernels
+```
 
 ## References
 
-https://wiki.ubuntu.com/SecurityTeam/SecureBoot
-https://wiki.archlinux.org/index.php/Unified_Extensible_Firmware_Interface
-https://wiki.gentoo.org/wiki/Sakaki%27s_EFI_Install_Guide/Configuring_Secure_Boot
+A very good summary of all the fragments that you can find regarding EFISTUB only secure boot was recently written
+by [Matthew Bentley](https://bentley.link/secureboot).
+
+Other:
+https://wiki.archlinux.org/index.php/Secure_Boot
