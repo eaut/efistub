@@ -15,6 +15,7 @@ Key features
   - configuration based UEFI boot menu entry creation
   - automated creation of signed secure boot EFI files
   - easy management of personal secure boot keys
+  - simple bash script does it all
 
 ## Usage
 
@@ -23,7 +24,7 @@ The script efistub has subcommands. They are "bootctl", "keys", "uefi".
 Usage: efistub command [ARGS]
 ```
 
-### BOOT MANAGEMENT
+### BOOT MANAGEMENT COMMANDS
 
 ```
 bootctl install [<config-file>]
@@ -36,7 +37,7 @@ bootctl rm-entry <title>
     Manually remove UEFI boot menu entry with the name <title>
 ```
 
-### KEY MANAGEMENT
+### KEY MANAGEMENT COMMANDS
 
 ```
 keys create [more]
@@ -69,7 +70,7 @@ uefi boot2setup
 All example configurations assume your linux kernel files are located in /boot and your
 EFI system partition is mounted in /boot/efi if not mentioned otherwise.
 
-### Basic setup
+### Basic boot example
 
 For a standard boot configuration all you need to add is the following:
 
@@ -100,6 +101,70 @@ with
 ```
 ls -l /boot/efi/EFI/arch
 ```
+### Secure boot example
+
+To add a secure boot configuration you need the following:
+
+```
+#/etc/efistub/config.d/20_arch-signed.conf
+#
+# Don't forget to insert your specific UUIDs!
+#
+TITLE="ArchSec"
+EFISIGNED="/boot/efi/EFI/arch/linux-boot-signed.efi"
+KERNEL="/boot/vmlinuz-linux"
+INITRD="/boot/intel-ucode.img /boot/initramfs-linux.img"
+OPTIONS="quiet splash resume=UUID=<your-swapfs-uuid> root=UUID=<your-rootfs-uuid> ro"
+```
+
+This setup requires your own secure boot keys. You can generate them with
+the following command:
+```
+efistub keys create
+```
+Your system must be in UEFI setup mode to load the keys to the UEFI key databases.
+Usually you switch to UEFI setup mode by clearing all secure boot keys in your
+motherboard setup.
+
+On many systems you can insert the keys directly with
+```
+efistub keys install
+```
+If that fails you can insert them with KeyTool or the built-in UEFI keymanager.
+In that case your need more key formats. You create those files with
+```
+efistub keys create more
+```
+The keys are stored in /etc/efistub/keys.
+
+Now you can install this configuration by executing
+
+```
+efistub bootctl install
+```
+
+To verify the successful installation list all UEFI boot entries with
+```
+efibootmgr -v
+```
+and check that the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img reside on the ESP
+with
+```
+ls -l /boot/efi/EFI/arch
+```
+
+Finally activate secure boot with
+
+```
+efistub keys switch usermode
+```
+Reboot and verify that your system booted in secure boot mode
+```
+efistub uefi status
+```
+### More boot example
+
+For other boot configurations see the provided examples.
 
 ### Automatic update of boot images when a new initramfs is generated
 
@@ -131,7 +196,7 @@ Type=oneshot
 ExecStart=/usr/bin/efistub bootctl update
 ```
 
-Finally enable it in systemd.
+Finally enable this configuration in systemd.
 ```
 systemctl enable /etc/systemd/system/efistub-update.path
 ```
@@ -152,8 +217,7 @@ Automatic boot image updates
 
 ## References
 
-A very good summary of all the fragments that you can find regarding EFISTUB only secure boot was recently written
-by [Matthew Bentley](https://bentley.link/secureboot).
+A very good summary of all the information fragments that you can find regarding EFISTUB based UEFI secure boot was recently written by [Matthew Bentley](https://bentley.link/secureboot).
 
 Other:
 https://wiki.archlinux.org/index.php/Secure_Boot
