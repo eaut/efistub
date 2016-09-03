@@ -1,4 +1,4 @@
-!/usr/bin/bash
+#!/bin/bash
 
 # ------------------------------------------------------------
 # Manage Linux EFISTUB (secure) boot configurations
