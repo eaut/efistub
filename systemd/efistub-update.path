@@ -1,0 +1,9 @@
+[Unit]
+Description=Update efistub boot config when kernel files are updated
+
+[Path]
+PathChanged=/boot/initramfs-linux-fallback.img
+
+[Install]
+WantedBy=multi-user.target
+WantedBy=system-update.target

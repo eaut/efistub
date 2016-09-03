@@ -1,0 +1,6 @@
+[Unit]
+Description=Update efistub boot config when kernel files are updated
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/efistub bootctl update

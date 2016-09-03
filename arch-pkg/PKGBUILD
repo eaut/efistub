@@ -1,7 +1,7 @@
 # Maintainer: eaut@boehm.org
 pkgname=efistub-git
-pkgver=r8.76cc60e
-pkgrel=3
+pkgver=r10.fcdcda5
+pkgrel=1
 pkgdesc="Manage UEFI only boot configurations for Linux EFISTUB kernels"
 arch=("any")
 url="https://github.com/eaut/efistub"
@@ -28,6 +28,6 @@ package() {
   install -d "$pkgdir/etc/efistub/config.d/"
   install -d "$pkgdir/etc/efistub/keys/"
   install -D -m 0755 -t "$pkgdir/usr/bin" efistub
-  install -D -m 0644 -t "$pkgdir/usr/share/licenses/${pkgname%-git}/LICENSE" LICENSE
+  install -D -m 0644 -t "$pkgdir/usr/share/licenses/${pkgname%-git}" LICENSE
   install -D -m 0644 -t "$pkgdir/etc/efistub/config.d" config-examples/*.conf
 }
