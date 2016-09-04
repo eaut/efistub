@@ -28,6 +28,8 @@ package() {
   install -d "$pkgdir/etc/efistub/config.d/"
   install -d "$pkgdir/etc/efistub/keys/"
   install -D -m 0755 -t "$pkgdir/usr/bin" efistub
+  install -D -m 0644 -t "$pkgdir/usr/lib/systemd/system" systemd/*
   install -D -m 0644 -t "$pkgdir/usr/share/licenses/${pkgname%-git}" LICENSE
-  install -D -m 0644 -t "$pkgdir/etc/efistub/config.d" config-examples/*.conf
+  install -D -m 0644 -t "$pkgdir/usr/share/doc/${pkgname%-git}" README.md
+  install -D -m 0644 -t "$pkgdir/usr/share/doc/${pkgname%-git}/config-examples" config-examples/*.conf
 }

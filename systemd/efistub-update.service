@@ -1,5 +1,5 @@
 [Unit]
-Description=Update efistub boot config when kernel files are updated
+Description=Update efistub boot config when kernel files are changed
 
 [Service]
 Type=oneshot
