@@ -69,15 +69,15 @@ uefi boot2setup
 
 ## Installation
 
-Create your own package with ```cd arch-pkg ; makepkg```
+Create your own package with `cd arch-pkg ; makepkg`
 
-Install it with ```pacman -U efistub-git```
+Install it with `pacman -U efistub-git`
 
 ## Setting up efistub configurations
 
-All example configurations assume your linux kernel files are located in ```/boot```
-and your EFI system partition is mounted in ```/boot/efi``` if not mentioned otherwise.
-They are located in ```/usr/share/doc/efistub/config-examples```
+All example configurations assume your linux kernel files are located in `/boot`
+and your EFI system partition is mounted in `/boot/efi` if not mentioned otherwise.
+They are located in `/usr/share/doc/efistub/config-examples`
 
 ### Basic boot example
 
@@ -102,7 +102,7 @@ To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the files ```vmlinuz-linux, intel-ucode.img and initramfs-linux.img```
+and check that the files `vmlinuz-linux, intel-ucode.img and initramfs-linux.img`
 reside on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
@@ -146,7 +146,7 @@ To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the file ```linux-boot-signed.efi``` resides on the ESP with
+and check that the file `linux-boot-signed.efi` resides on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
 ```
@@ -158,9 +158,6 @@ Reboot and verify that your system booted in secure boot mode
 ```
 efistub uefi status
 ```
-### More boot example
-
-For other boot configurations see the provided examples.
 
 ### Automatic update of boot images when a new initramfs is generated
 
@@ -195,5 +192,5 @@ regarding EFISTUB based UEFI secure boot was recently written
 by [Matthew Bentley](https://bentley.link/secureboot).
 
 Other:
-https://wiki.archlinux.org/index.php/Secure_Boot
-https://wiki.archlinux.org/index.php/EFISTUB
+- [Secure Boot](https://wiki.archlinux.org/index.php/Secure_Boot)
+- [EFISTUB](https://wiki.archlinux.org/index.php/EFISTUB)
