@@ -1,8 +1,8 @@
 # Maintainer: eaut@boehm.org
 pkgname=efistub-git
-pkgver=r10.fcdcda5
+pkgver=r12.3fee680
 pkgrel=1
-pkgdesc="Manage UEFI only boot configurations for Linux EFISTUB kernels"
+pkgdesc="Manage UEFI only (secure) boot configurations for Linux EFISTUB kernels"
 arch=("any")
 url="https://github.com/eaut/efistub"
 license=('GPL3')

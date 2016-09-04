@@ -1,7 +1,9 @@
 # EFISTUB
 ## Description
 
-A script to manage UEFI boot configurations for Linux EFISTUB kernels. By using "efistub" the management of plain EFISTUB boot configurations is greatly simplified. The config file syntax is similar to systemd-boot.
+A script to manage UEFI boot configurations for Linux EFISTUB kernels. By using "efistub"
+the management of plain EFISTUB boot configurations is greatly simplified. The config file
+syntax is similar to systemd-boot.
 
 The management of all aspects of UEFI secure boot configurations is directly supported.
 Generated signed boot images contain the Linux kernel as well as the thereafter used
