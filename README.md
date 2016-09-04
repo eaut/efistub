@@ -67,10 +67,17 @@ uefi boot2setup
     start UEFI setup after next boot
 ```
 
-## Setting up EFISTUB configurations
+## Installation
+
+Create your own package with ```cd arch-pkg ; makepkg```
+
+Install it with ```pacman -U efistub-git```
+
+## Setting up efistub configurations
 
 All example configurations assume your linux kernel files are located in /boot and your
 EFI system partition is mounted in /boot/efi if not mentioned otherwise.
+They are located in ```/usr/share/doc/efistub/config-examples```
 
 ### Basic boot example
 
@@ -133,12 +140,11 @@ On many systems you can insert the keys directly with
 efistub keys install
 ```
 If that fails you can insert them with KeyTool or the built-in UEFI keymanager.
-In that case your need more key formats. You create those files with
+In this case your need more key formats. You create those files with
 ```
 efistub keys create more
 ```
 The keys are stored in /etc/efistub/keys.
-
 Now you can install this configuration by executing
 
 ```
@@ -149,8 +155,7 @@ To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img reside on the ESP
-with
+and check that the files linux-boot-signed.efi resides on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
 ```
@@ -175,32 +180,9 @@ You manualy update all boot images after a new kernel was installed with
 efistub bootctl update
 ```
 
-Full automation can be achieved using two systemd files.
+This can be automated by using the provided systemd files. Just enable them with
 ```
-# 1st  - /etc/systemd/system/efistub-update.path
-[Unit]
-Description=Trigger efistub boot image generation
-
-[Path]
-PathChanged=/boot/initramfs-linux-fallback.img
-
-[Install]
-WantedBy=multi-user.target
-WantedBy=system-update.target
-```
-```
-# 2nd  - /etc/systemd/system/efistub-update.path
-[Unit]
-Description=Start efistub boot image generation
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/efistub bootctl update
-```
-
-Finally enable this configuration in systemd.
-```
-systemctl enable /etc/systemd/system/efistub-update.path
+systemctl enable efistub-update.path
 ```
 
 ## Used directories and configuration files
@@ -213,8 +195,8 @@ systemctl enable /etc/systemd/system/efistub-update.path
 Automatic boot image updates
 
 ```
-/etc/system.d/system/efistub-update.path	    trigger automatic boot file generation
-/etc/system.d/system/efistub-update.service   run 'efistub update-bootimages' for new kernels
+/usr/lib/systemd/system/efistub-update.path	    trigger automatic boot file generation
+/usr/lib/systemd/system/efistub-update.service  run 'efistub bootctl update'
 ```
 
 ## References
