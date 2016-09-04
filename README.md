@@ -75,8 +75,8 @@ Install it with ```pacman -U efistub-git```
 
 ## Setting up efistub configurations
 
-All example configurations assume your linux kernel files are located in /boot and your
-EFI system partition is mounted in /boot/efi if not mentioned otherwise.
+All example configurations assume your linux kernel files are located in ```/boot```
+and your EFI system partition is mounted in ```/boot/efi``` if not mentioned otherwise.
 They are located in ```/usr/share/doc/efistub/config-examples```
 
 ### Basic boot example
@@ -94,26 +94,22 @@ KERNEL="/boot/vmlinuz-linux"
 INITRD="/boot/intel-ucode.img /boot/initramfs-linux.img"
 OPTIONS="resume=UUID=<your-swap-uuid> root=UUID=<your-rootfs-uuid> ro quiet splash"
 ```
-
 Now you can install this configuration by executing
-
 ```
 efistub bootctl install
 ```
-
 To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the files ```vmlinuz-linux, intel-ucode.img and initramfs-linux.img``` reside
-on the ESP with
+and check that the files ```vmlinuz-linux, intel-ucode.img and initramfs-linux.img```
+reside on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
 ```
 ### Secure boot example
 
 To add a secure boot configuration you need the following:
-
 ```
 #/etc/efistub/config.d/20_arch-signed.conf
 #
@@ -125,7 +121,6 @@ KERNEL="/boot/vmlinuz-linux"
 INITRD="/boot/intel-ucode.img /boot/initramfs-linux.img"
 OPTIONS="quiet splash resume=UUID=<your-swapfs-uuid> root=UUID=<your-rootfs-uuid> ro"
 ```
-
 This setup requires your own secure boot keys. You can generate them with
 the following command:
 ```
@@ -195,7 +190,9 @@ Automatic boot image updates
 
 ## References
 
-A very good summary of all the information fragments that you can find regarding EFISTUB based UEFI secure boot was recently written by [Matthew Bentley](https://bentley.link/secureboot).
+A very good summary of all the information fragments you can find on the Internet
+regarding EFISTUB based UEFI secure boot was recently written
+by [Matthew Bentley](https://bentley.link/secureboot).
 
 Other:
 https://wiki.archlinux.org/index.php/Secure_Boot
