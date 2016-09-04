@@ -105,8 +105,8 @@ To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the files vmlinuz-linux, intel-ucode.img and initramfs-linux.img reside on the ESP
-with
+and check that the files ```vmlinuz-linux, intel-ucode.img and initramfs-linux.img``` reside
+on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
 ```
@@ -133,9 +133,7 @@ efistub keys create
 ```
 Your system must be in UEFI setup mode to load the keys to the UEFI key databases.
 Usually you switch to UEFI setup mode by clearing all secure boot keys in your
-motherboard setup.
-
-On many systems you can insert the keys directly with
+motherboard setup. On many systems you can insert the keys directly with
 ```
 efistub keys install
 ```
@@ -146,22 +144,18 @@ efistub keys create more
 ```
 The keys are stored in /etc/efistub/keys.
 Now you can install this configuration by executing
-
 ```
 efistub bootctl install
 ```
-
 To verify the successful installation list all UEFI boot entries with
 ```
 efibootmgr -v
 ```
-and check that the files linux-boot-signed.efi resides on the ESP with
+and check that the file ```linux-boot-signed.efi``` resides on the ESP with
 ```
 ls -l /boot/efi/EFI/arch
 ```
-
 Finally activate secure boot with
-
 ```
 efistub keys switch usermode
 ```
