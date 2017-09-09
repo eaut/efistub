@@ -61,7 +61,7 @@ fn_create_bootimg_signed() {
   local SIGNEDIMG="$4"
 
   # create temporary build directory
-  local BUILDDIR="$(/usr/bin/mktemp -d kernel-build-XXXX)"
+  local BUILDDIR="$(/usr/bin/mktemp -d kernel-build-XXXX --tmpdir)"
   chmod 700 "$BUILDDIR"
 
   # join initrd images
