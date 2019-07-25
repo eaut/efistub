@@ -206,7 +206,7 @@ fn_create_keys() {
     -days 3650 -nodes -sha256
   openssl req -new -x509 -newkey rsa:2048 \
     -subj "/CN=$NAME key-exchange key/" \
-    -keyout KEK.key -out KEK.pemi \
+    -keyout KEK.key -out KEK.pem \
     -days 3650 -nodes -sha256
   openssl req -new -x509 -newkey rsa:2048 \
     -subj "/CN=$NAME kernel signing key/" \
@@ -276,7 +276,6 @@ fn_install_personal_keys() {
 fn_switch_to_usermode() {
 
   cd "$KEYDIR" || exit 1
-  fn_unlock_keyvars
 
   # insert personal PK key
   efi-updatevar -f PK.auth PK
