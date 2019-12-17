@@ -52,7 +52,7 @@ keys create [more]
 keys install
     install secure boot keys into UEFI databases (DB,KEK)
 
-keys switch [usermode|setupmode]
+keys activate [usermode|setupmode]
     Usermode: activate usermode by installing the personal PK key
     Setupmode: activate setupmode by removing the personal PK key
 ```
@@ -152,7 +152,7 @@ ls -l /boot/efi/EFI/arch
 ```
 Finally activate secure boot with
 ```
-efistub keys switch usermode
+efistub keys activate usermode
 ```
 Reboot and verify that your system booted in secure boot mode
 ```
